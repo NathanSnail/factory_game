@@ -145,11 +145,11 @@ type Generator struct {
 	value int
 }
 
-func (g *Generator) symbol() string {
+func (g Generator) symbol() string {
 	return "\033[36m" + directionalArrow(g.dir) + "\033[0m"
 }
 
-func (g *Generator) update(board *Board, pos Vec2) {
+func (g Generator) update(board *Board, pos Vec2) {
 	board.tryPushTo(&g.value, getDirVec(g.dir), pos)
 }
 
