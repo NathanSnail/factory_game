@@ -2,37 +2,59 @@ package main
 
 import "fmt"
 
-const W = 64
-const H = 64
+const W = 10
+const H = 10
 
 type Board [W][H]ICell
 
-func (b Board) requestRun(pos Vec2) {
-	if !b.contains(pos) {
-		return
+func (board *Board) update() {
+	for x := 0; x < W; x++ {
+		for y := 0; y < W; y++ {
+			board.requestRun(Vec2{x: x, y: y})
+		}
 	}
-	v := b.get(pos)
-	if v.updated {
-		return
-	}
-	v.updated = true
-	v.cell.update(&b, pos)
-}
-func (b Board) get(pos Vec2) *ICell {
-	return &b[pos.x][pos.y]
 }
 
-func (b Board) set(pos Vec2, v ICell) {
-	b[pos.x][pos.y] = v
+func (board *Board) generateImage() string {
+	out := ""
+	for y := 0; y < H; y++ {
+		for x := 0; x < W; x++ {
+			out += board[x][y].cell.symbol()
+		}
+		if y == H-1 {
+			continue
+		}
+		out += "\n"
+	}
+	return out
 }
 
-func (board *Board) tryPushTo(value *int, dir Vec2, pos Vec2) bool {
-	sampling := pos.add(dir)
+func (board *Board) requestRun(pos Vec2) {
+	cell := board.get(pos)
+	if cell.updated {
+		return
+	}
+	cell.updated = true
+	cell.cell.update(board, pos)
+}
+
+func (board *Board) get(pos Vec2) *ICell {
+	return &board[pos.x][pos.y]
+}
+
+func (board *Board) set(pos Vec2, value ICell) {
+	board[pos.x][pos.y] = value
+}
+
+// works on invalid pos
+func (board *Board) tryPushTo(value *int, shift Vec2, pos Vec2) bool {
+	sampling := pos.add(shift)
 	if !board.contains(sampling) {
 		return false
 	}
-	v := board.get(pos).value
-	if v == nil {
+	board.requestRun(sampling)
+	current := board.get(pos).value
+	if current == nil {
 		board.get(pos).value = value
 		return true
 	}
@@ -124,7 +146,7 @@ type Generator struct {
 }
 
 func (g Generator) symbol() string {
-	return "\033[36m" + directionalArrow(g.dir)
+	return "\033[36m" + directionalArrow(g.dir) + "\033[0m"
 }
 
 func (g Generator) update(board *Board, pos Vec2) {
@@ -136,7 +158,7 @@ type Empty struct{}
 func (Empty) symbol() string      { return " " }
 func (Empty) update(*Board, Vec2) {}
 
-func main() {
+func initBoard() Board {
 	board := Board{}
 	for x := 0; x < W; x++ {
 		for y := 0; y < H; y++ {
@@ -144,7 +166,10 @@ func main() {
 		}
 	}
 	board.set(Vec2{x: 0, y: 0}, ICell{updated: false, value: nil, cell: Generator{dir: Down, value: 1}})
-	fmt.Println("test!")
-	a := 10
-	fmt.Println(a)
+	return board
+}
+
+func main() {
+	board := initBoard()
+	fmt.Println(board.generateImage())
 }
