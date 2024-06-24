@@ -65,7 +65,7 @@ func (board *Board) tryPushTo(value *int, shift Vec2, pos Vec2) bool {
 	}
 	board.requestRun(sampling)
 	at := board.get(sampling)
-	if at.value == nil {
+	if at.cell.accept(board, sampling) {
 		at.value = value
 		return true
 	}
@@ -94,6 +94,7 @@ type ICell struct {
 type Cell interface {
 	symbol() string
 	update(board *Board, pos Vec2)
+	accept(board *Board, pos Vec2) bool
 }
 type Direction int8
 
@@ -154,6 +155,10 @@ func (conveyor Conveyor) update(board *Board, pos Vec2) {
 	}
 }
 
+func (Conveyor) accept(board *Board, pos Vec2) bool {
+	return board.get(pos).value == nil
+}
+
 type Generator struct {
 	dir   Direction
 	value int
@@ -167,16 +172,21 @@ func (g Generator) update(board *Board, pos Vec2) {
 	board.tryPushTo(&g.value, getDirVec(g.dir), pos)
 }
 
+func (g Generator) accept(*Board, Vec2) bool { return false }
+
 type Empty struct{}
 
 func (Empty) symbol() string      { return " " }
 func (Empty) update(*Board, Vec2) {}
+func (Empty) accept(board *Board, pos Vec2) bool {
+	return board.get(pos).value == nil
+}
 
 func initBoard() Board {
 	board := Board{}
 	for x := 0; x < W; x++ {
 		for y := 0; y < H; y++ {
-			board.set(Vec2{x: x, y: y}, ICell{updated: false, value: nil, cell: Empty{}})
+			board[x][y] = ICell{updated: false, value: nil, cell: Empty{}}
 		}
 	}
 	board[0][0] = ICell{updated: false, value: nil, cell: Generator{dir: Down, value: 1}}
