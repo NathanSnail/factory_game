@@ -1,13 +1,23 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"time"
+)
 
-const W = 10
-const H = 10
+const W = 3
+const H = 3
 
 type Board [W][H]ICell
 
 func (board *Board) update() {
+
+	for x := 0; x < W; x++ {
+		for y := 0; y < W; y++ {
+			board[x][y].updated = false
+		}
+	}
 	for x := 0; x < W; x++ {
 		for y := 0; y < W; y++ {
 			board.requestRun(Vec2{x: x, y: y})
@@ -19,10 +29,11 @@ func (board *Board) generateImage() string {
 	out := ""
 	for y := 0; y < H; y++ {
 		for x := 0; x < W; x++ {
-			out += board[x][y].cell.symbol()
-		}
-		if y == H-1 {
-			continue
+			if board[x][y].value != nil {
+				out += strconv.Itoa(*board[x][y].value)
+			} else {
+				out += board[x][y].cell.symbol()
+			}
 		}
 		out += "\n"
 	}
@@ -53,9 +64,9 @@ func (board *Board) tryPushTo(value *int, shift Vec2, pos Vec2) bool {
 		return false
 	}
 	board.requestRun(sampling)
-	current := board.get(pos).value
-	if current == nil {
-		board.get(pos).value = value
+	at := board.get(sampling)
+	if at.value == nil {
+		at.value = value
 		return true
 	}
 	return false
@@ -71,7 +82,7 @@ func (Board) contains(v Vec2) bool {
 }
 
 func (v1 Vec2) add(v2 Vec2) Vec2 {
-	return Vec2{x: v1.x + v2.x, y: v2.y + v2.y}
+	return Vec2{x: v1.x + v2.x, y: v1.y + v2.y}
 }
 
 type ICell struct {
@@ -129,12 +140,15 @@ func getDirVec(dir Direction) Vec2 {
 	panic("Invalid direction")
 }
 
-func (c Conveyor) update(board *Board, pos Vec2) {
+var c = 0
+
+func (conveyor Conveyor) update(board *Board, pos Vec2) {
+	c++
 	cur := board.get(pos).value
 	if cur == nil {
 		return
 	}
-	success := board.tryPushTo(cur, getDirVec(c.dir), pos)
+	success := board.tryPushTo(cur, getDirVec(conveyor.dir), pos)
 	if success {
 		board.get(pos).value = nil
 	}
@@ -165,11 +179,18 @@ func initBoard() Board {
 			board.set(Vec2{x: x, y: y}, ICell{updated: false, value: nil, cell: Empty{}})
 		}
 	}
-	board.set(Vec2{x: 0, y: 0}, ICell{updated: false, value: nil, cell: Generator{dir: Down, value: 1}})
+	board[0][0] = ICell{updated: false, value: nil, cell: Generator{dir: Down, value: 1}}
+	board[0][1] = ICell{updated: false, value: nil, cell: Conveyor{dir: Right}}
 	return board
 }
 
 func main() {
 	board := initBoard()
-	fmt.Println(board.generateImage())
+	reset := "\033[" + strconv.Itoa(H) + "A\033[" + strconv.Itoa(H) + "D"
+	for {
+		fmt.Print(board.generateImage())
+		fmt.Print(reset)
+		board.update()
+		time.Sleep(time.Second)
+	}
 }
