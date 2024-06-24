@@ -56,7 +56,20 @@ func (c Conveyor) symbol() string {
 	panic("Invalid conveyor")
 }
 
-func (c Conveyor) get_dir() Vec2 {
+func tryPushTo(board *Board, value *int, dir Vec2, pos Vec2) bool {
+	sampling := pos.add(dir)
+	if !boardContains(sampling) {
+		return false
+	}
+	v := board[sampling.x][sampling.y].value
+	if v == nil {
+		board[sampling.x][sampling.y].value = value
+		return true
+	}
+	return false
+}
+
+func (c Conveyor) getDir() Vec2 {
 	switch c.dir {
 	case Left:
 		return Vec2{x: -1, y: 0}
@@ -71,13 +84,13 @@ func (c Conveyor) get_dir() Vec2 {
 }
 
 func (c Conveyor) update(board *Board, pos Vec2) {
-	sampling := pos.add(c.get_dir())
-	if !boardContains(sampling) {
+	cur := board[pos.x][pos.y].value
+	if cur == nil {
 		return
 	}
-	v := board[sampling.x][sampling.y].value
-	if v == nil {
-
+	success := tryPushTo(board, cur, c.getDir(), pos)
+	if success {
+		board[pos.x][pos.y].value = nil
 	}
 }
 
